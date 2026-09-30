@@ -27,6 +27,14 @@ DEFAULT_FROM_EMAIL=your-account@gmail.com
 ```
 The `.env` file is ignored by Git. Restart the server after creating or changing it. Django defaults to Gmail SMTP on port 587 with TLS; see `.env.example` for additional settings.
 
+## Deploy to Render
+1. Create a PostgreSQL database in Render and copy its **Internal Database URL**.
+2. In Render, create a Blueprint from `Apurba0125/e-tender` (or create a web service from that repository). The included `render.yaml` configures the Django web service; set `DATABASE_URL` to the database URL when prompted or in the service environment.
+3. Deploy. The build command installs dependencies, collects static files, and applies migrations. Render generates `DJANGO_SECRET_KEY` and `BID_ENCRYPTION_KEY`; keep the latter stable or previously encrypted bids cannot be decrypted.
+4. Add email settings in the Render service environment if outgoing email is needed. Do not put credentials in GitHub.
+
+The included free web-service configuration uses an ephemeral filesystem: uploaded tender and bid documents can disappear on redeploy/restart. Use persistent storage (such as a paid Render disk or private object storage) before handling real tenders. A free PostgreSQL database may also have plan-specific limits or expiration; review Render's current terms before storing production data.
+
 ## Where the SRS is covered
 | SRS area | Code |
 |---|---|
