@@ -1,0 +1,6 @@
+{% extends 'base.html' %}{% block content %}<h1>Reports</h1><div class="grid">
+<div class="card"><h2>Tenders by status</h2>{% for s in by_status %}<p>{{ s.status }} <b>{{ s.n }}</b></p>{% endfor %}</div>
+<div class="card"><h2>Total awarded value</h2><p style="font-size:1.6rem">{{ awarded_value }}</p></div></div>
+<div class="card"><h2>Vendor participation</h2><table><tr><th>Tender</th><th>Title</th><th>Bids</th></tr>{% for p in participation %}<tr><td>{{ p.tender_no }}</td><td>{{ p.title }}</td><td>{{ p.nb }}</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>Savings vs estimate</h2><a class="btn sec" href="?export=csv">CSV</a><table><tr><th>Tender</th><th>Estimate</th><th>Awarded</th><th>Saving</th></tr>{% for r in savings %}<tr><td>{{ r.t.tender_no }}</td><td>{{ r.t.estimated_value }}</td><td>{{ r.t.award.awarded_value }}</td><td>{{ r.saving }}</td></tr>{% endfor %}</table></div>
+<div class="card"><h2>Recent approvals</h2><table>{% for n,s,d in turnaround %}<tr><td>{{ n }}</td><td>{{ s }}</td><td>{{ d|date:"d M H:i" }}</td></tr>{% endfor %}</table></div>{% endblock %}

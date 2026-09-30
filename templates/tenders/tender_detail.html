@@ -1,0 +1,53 @@
+{% extends 'base.html' %}{% block content %}
+<h1>{{ t.tender_no }} – {{ t.title }} <span class="badge info">{{ t.get_status_display }}</span></h1>
+{% if t.status_reason and t.status in 'REJECTED SENT_BACK CANCELLED' %}<div class="card"><b>{{ t.get_status_display }}{% if t.return_stage %} at {{ t.return_stage }}{% endif %}:</b> {{ t.status_reason }}</div>{% endif %}
+<div class="card"><dl class="kv"><dt>Category</dt><dd>{{ t.category }}</dd><dt>Notice</dt><dd>{{ t.notice|default:"—" }}</dd><dt>Visibility</dt><dd>{{ t.get_visibility_display }}</dd>
+<dt>Quantity</dt><dd>{{ t.quantity }} {{ t.unit }}</dd><dt>Estimated value</dt><dd>{{ t.currency }} {{ t.estimated_value }}</dd><dt>EMD</dt><dd>{{ t.emd_amount }}</dd>
+<dt>Bid window</dt><dd>{{ t.bid_start_at|date:"d M Y H:i" }} → <b>{{ t.bid_end_at|date:"d M Y H:i" }}</b> {% if t.accepting_bids %}<span class="badge ok" id="cd" data-end="{{ t.bid_end_at|date:'c' }}"></span>{% endif %}</dd>
+<dt>Planned opening</dt><dd>{{ t.opening_at|date:"d M Y H:i" }}</dd><dt>Contact</dt><dd>{{ t.contact_person|default:"—" }}</dd>
+<dt>Description</dt><dd>{{ t.description|linebreaksbr }}</dd><dt>Eligibility</dt><dd>{{ t.eligibility|linebreaksbr|default:"—" }}</dd><dt>Terms</dt><dd>{{ t.terms|linebreaksbr|default:"—" }}</dd><dt>Evaluation</dt><dd>{{ t.evaluation_criteria|linebreaksbr|default:"—" }}</dd>
+<dt>Documents</dt><dd>{% for d in t.documents.all %}<a href="{% url 'download' 'tender' d.pk %}">📎 {{ d.name }}</a><br>{% empty %}—{% endfor %}</dd></dl></div>
+{% if t.corrigenda.exists %}<div class="card"><h2>Corrigenda</h2>{% for c in t.corrigenda.all %}<p><span class="mut">{{ c.created_at|date:"d M Y H:i" }}</span> {{ c.text }}</p>{% endfor %}</div>{% endif %}
+
+{% if user.role == 'VENDOR' %}
+<div class="card">{% if my_bid and my_bid.status != 'WITHDRAWN' %}<p>Your bid <b>{{ my_bid.receipt_no }}</b> (v{{ my_bid.current_version }}) – <span class="badge">{{ my_bid.get_status_display }}</span></p>{% endif %}
+{% if t.accepting_bids %}<a class="btn" href="{% url 'bid_form' t.pk %}">{% if my_bid and my_bid.status != 'WITHDRAWN' %}Edit bid{% else %}Submit bid{% endif %}</a>{% else %}<span class="badge warn">Bidding is not open</span>{% endif %}</div>
+{% if award %}<div class="card"><h2>🎉 Awarded to you</h2><p>Value: {{ t.currency }} {{ award.awarded_value }} – {{ award.get_status_display }}</p>
+{% if award.status == 'SENT' %}<form method="post" action="{% url 'award_accept' t.pk %}">{% csrf_token %}<button class="ok btn">Accept award</button></form>{% endif %}</div>{% endif %}
+{% else %}
+<div class="card"><h2>Workflow actions</h2><div class="row">
+{% if user.role == 'PO' %}
+ {% if t.status == 'DRAFT' %}<a class="btn sec" href="{% url 'tender_edit' t.pk %}">Edit</a><form method="post" action="{% url 'tender_action' t.pk %}">{% csrf_token %}<button name="action" value="publish" class="ok btn">Publish</button></form>{% endif %}
+ <form method="post" action="{% url 'tender_action' t.pk %}">{% csrf_token %}
+  {% if t.status == 'BIDDING_CLOSED' or t.status == 'PUBLISHED' or t.status == 'BIDDING_OPEN' %}<button name="action" value="open" {% if not t.can_open %}disabled title="Available only after the deadline"{% endif %}>Open tender</button>{% endif %}
+  {% if t.status == 'REJECTED' %}<button name="action" value="reevaluate" class="sec btn">Re-evaluate</button><button name="action" value="retender" class="sec btn">Re-tender</button>{% endif %}
+  {% if t.status == 'AWARDED' %}<button name="action" value="close">Close tender</button>{% endif %}
+  <button name="action" value="clone" class="sec btn">Clone</button></form>
+ {% if t.status == 'OPENED' %}<a class="btn" href="{% url 'forward' t.pk 'technical' %}">Forward to Technical Committee</a>{% endif %}
+ {% if t.status == 'TECHNICAL_APPROVED' %}<a class="btn" href="{% url 'forward' t.pk 'finance' %}">Forward to Finance Committee</a>{% endif %}
+ {% if t.status == 'SENT_BACK' %}<a class="btn" href="{% url 'forward' t.pk t.return_stage|lower %}">Re-forward to {{ t.return_stage }}</a>{% endif %}
+{% endif %}
+{% if t.statements.exists %}<a class="btn sec" href="{% url 'statement' t.pk %}">Comparative statement</a>{% endif %}
+{% if t.award %}<a class="btn sec" href="{% url 'award' t.pk %}">{% if t.status == 'APPROVED' %}Send award email{% else %}Award{% endif %}</a>{% endif %}
+{% if user.role == 'TC' or user.role == 'FC' %}<a class="btn" href="{% url 'review' t.pk %}">Review</a>{% endif %}
+{% if user.role == 'CFO' and t.statements.exists %}<a class="btn" href="{% url 'cfo' t.pk %}">CFO screen</a>{% endif %}
+</div>
+{% if user.role == 'PO' and t.status in 'PUBLISHED BIDDING_OPEN' %}<hr>
+<form method="post" action="{% url 'tender_action' t.pk %}">{% csrf_token %}<input type="hidden" name="action" value="extend"><div class="grid"><div>{{ extend_form.new_end.label_tag }}{{ extend_form.new_end }}</div><div>{{ extend_form.reason.label_tag }}{{ extend_form.reason }}</div></div><button class="sec btn">Extend deadline</button></form>
+<form method="post" action="{% url 'tender_action' t.pk %}">{% csrf_token %}<input type="hidden" name="action" value="corrigendum"><p><textarea name="text" rows="2" placeholder="Corrigendum / amendment text"></textarea></p><button class="sec btn">Publish corrigendum</button></form>{% endif %}
+{% if user.role == 'PO' and t.status != 'CANCELLED' and t.status != 'AWARDED' and t.status != 'CLOSED' %}<hr><form method="post" action="{% url 'tender_action' t.pk %}" class="row" onsubmit="return confirm('Cancel this tender?')">{% csrf_token %}<input type="hidden" name="action" value="cancel"><input name="reason" placeholder="Cancellation reason" style="max-width:300px" required><button class="bad btn">Cancel tender</button></form>{% endif %}
+</div>
+
+<div class="card"><h2>Bids</h2>
+{% if opening_summary %}<p class="mut">Opened {{ t.opened_at|date:"d M Y H:i" }} by {{ t.opened_by }} · {{ opening_summary|length }} bid(s)</p>
+<table><tr><th>Vendor</th><th>Price</th><th>Taxes</th><th>Delivery</th><th>Validity</th><th>Status</th><th>Files</th></tr>{% for r in opening_summary %}<tr><td>{{ r.bid.vendor }}</td><td>{{ r.p.price }}</td><td>{{ r.p.taxes }}</td><td>{{ r.p.delivery_days }} d</td><td>{{ r.p.validity_days }} d</td><td><span class="badge">{{ r.bid.get_status_display }}</span></td>
+<td>{% if r.bid.latest.document %}<a href="{% url 'download' 'bid' r.bid.latest.pk %}">Doc</a>{% endif %} {% if r.bid.latest.emd_proof %}<a href="{% url 'download' 'emd' r.bid.latest.pk %}">EMD</a>{% endif %}</td></tr>{% endfor %}</table>
+{% elif t.bids_visible %}<p class="mut">Opened – no bids were received.</p>{% else %}<div class="sealed">🔒 Bids are sealed until the tender is opened.</div>{% endif %}</div>
+
+{% if forwards or approvals %}<div class="card"><h2>Approval history</h2><table><tr><th>When</th><th>Stage</th><th>By</th><th>Decision</th><th>Remarks</th></tr>
+{% for f in forwards %}<tr><td>{{ f.forwarded_at|date:"d M H:i" }}</td><td>{{ f.stage }}</td><td>{{ f.forwarded_by }}</td><td>Forwarded</td><td>{{ f.remarks }} {% for d in f.documents.all %}<a href="{% url 'download' 'stage' d.pk %}">📎{{ d.name }}</a> {% endfor %}</td></tr>{% endfor %}
+{% for a in approvals %}<tr><td>{{ a.decided_at|date:"d M H:i" }}</td><td>{{ a.stage }}</td><td>{{ a.approver }}</td><td><span class="badge {% if a.decision == 'APPROVE' %}ok{% else %}bad{% endif %}">{{ a.get_decision_display }}</span></td><td>{{ a.remarks }}</td></tr>{% endfor %}</table></div>{% endif %}
+<div class="card"><h2>Timeline</h2>{% for l in timeline %}<p class="mut">{{ l.timestamp|date:"d M Y H:i" }} · {{ l.actor_name }} · {{ l.action }}</p>{% empty %}<p class="mut">—</p>{% endfor %}</div>
+{% endif %}
+<script>const cd=document.getElementById('cd');if(cd){const end=new Date(cd.dataset.end);(function tick(){const s=Math.max(0,(end-new Date())/1000|0);cd.textContent='⏱ '+Math.floor(s/86400)+'d '+Math.floor(s%86400/3600)+'h '+Math.floor(s%3600/60)+'m '+s%60+'s left';if(s>0)setTimeout(tick,1000)})()}</script>
+{% endblock %}

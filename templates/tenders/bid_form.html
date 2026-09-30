@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}<div class="card" style="max-width:720px"><h1>Bid – {{ t.tender_no }}</h1>
+<p class="mut">Closes {{ t.bid_end_at|date:"d M Y H:i" }} (server time). Your bid is encrypted and sealed until the tender is opened.{% if bid and bid.current_version %} Editing creates version {{ bid.current_version|add:1 }}.{% endif %}</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button>Submit bid</button></form>
+{% if bid and bid.status != 'WITHDRAWN' %}<form method="post" action="{% url 'bid_withdraw' bid.pk %}" onsubmit="return confirm('Withdraw your bid?')">{% csrf_token %}<button class="bad btn">Withdraw bid</button></form>{% endif %}</div>{% endblock %}

@@ -1,0 +1,2 @@
+{% extends 'base.html' %}{% block content %}<div class="card" style="max-width:720px"><h1>{{ title }}</h1>
+<form method="post" {% if multipart %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}{{ form.as_p }}<button>Save</button> <a href="javascript:history.back()">Cancel</a></form></div>{% endblock %}

@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}<div class="card login"><h1>{% if portal == 'vendor' %}Vendor{% else %}Internal{% endif %} login</h1>
+<form method="post">{% csrf_token %}<p><label>Username or email</label><input name="username" autofocus required></p>
+<p><label>Password</label><input type="password" name="password" required></p><button>Sign in</button></form>
+<p class="mut">{% if portal == 'vendor' %}New vendor? <a href="{% url 'register' %}">Register</a> · <a href="{% url 'internal_login' %}">Internal staff login</a>{% else %}<a href="{% url 'vendor_login' %}">Vendor portal</a>{% endif %} · <a href="{% url 'password_reset' %}">Forgot password?</a></p></div>{% endblock %}

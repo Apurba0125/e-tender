@@ -1,0 +1,2 @@
+{% extends 'base.html' %}{% block content %}<div class="card" style="max-width:720px"><h1>Forward {{ t.tender_no }} to {{ stage|title }} stage</h1>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button>Forward</button></form></div>{% endblock %}

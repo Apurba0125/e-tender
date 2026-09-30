@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<h1>Notifications</h1><div class="card">{% for n in items %}<p>{{ n.created_at|date:"d M H:i" }} · {% if n.link %}<a href="{{ n.link }}">{{ n.message }}</a>{% else %}{{ n.message }}{% endif %}</p>{% empty %}<p class="mut">Nothing yet.</p>{% endfor %}</div>{% endblock %}

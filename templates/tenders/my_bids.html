@@ -1,0 +1,3 @@
+{% extends 'base.html' %}{% block content %}<h1>My bids</h1><div class="card"><table><tr><th>Receipt</th><th>Tender</th><th>Version</th><th>Last submitted</th><th>Status</th><th></th></tr>
+{% for b in bids %}<tr><td>{{ b.receipt_no }}</td><td><a href="{% url 'tender_detail' b.tender.pk %}">{{ b.tender.tender_no }}</a></td><td>v{{ b.current_version }} ({{ b.versions.count }} stored)</td><td>{{ b.submitted_at|date:"d M Y H:i:s" }}</td><td><span class="badge">{{ b.get_status_display }}</span></td>
+<td>{% if b.tender.accepting_bids %}<a href="{% url 'bid_form' b.tender.pk %}">Edit / withdraw</a>{% endif %}</td></tr>{% empty %}<tr><td colspan="6">No bids yet.</td></tr>{% endfor %}</table></div>{% endblock %}

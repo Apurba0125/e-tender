@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}<h1>Tenders</h1>
+<form class="row" method="get"><input name="q" value="{{ q }}" placeholder="Search no./title" style="width:220px"><select name="status" style="width:auto"><option value="">All statuses</option>{% for v,l in statuses %}<option value="{{ v }}" {% if v == sel %}selected{% endif %}>{{ l }}</option>{% endfor %}</select><button>Filter</button>
+{% if user.role == 'PO' or user.role == 'ADMIN' %}<a class="btn sec" href="?export=csv">Export CSV</a>{% endif %}{% if user.role == 'PO' %}<a class="btn" href="{% url 'tender_create' %}">+ New tender</a>{% endif %}</form><br>
+<div class="card"><table><tr><th>No.</th><th>Title</th><th>Category</th><th>Est. value</th><th>Deadline</th><th>Status</th></tr>
+{% for t in tenders %}<tr><td><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }}</a></td><td>{{ t.title }}</td><td>{{ t.category }}</td><td>{{ t.currency }} {{ t.estimated_value }}</td><td>{{ t.bid_end_at|date:"d M Y H:i" }}</td><td><span class="badge info">{{ t.get_status_display }}</span></td></tr>{% empty %}<tr><td colspan="6">No tenders.</td></tr>{% endfor %}</table></div>{% endblock %}

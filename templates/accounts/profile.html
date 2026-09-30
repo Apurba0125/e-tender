@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}<h1>{{ vendor.company_name }} <span class="badge">{{ vendor.get_status_display }}</span></h1>
+{% if not user.email_verified %}<p class="badge warn">Email not verified yet</p>{% endif %}
+<div class="grid"><div class="card"><h2>Profile</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button name="save_profile">Save</button></form></div>
+<div class="card"><h2>Compliance documents</h2><ul>{% for d in vendor.documents.all %}<li>{{ d.title }} {% if d.expires_on %}<span class="mut">(expires {{ d.expires_on }})</span>{% endif %}</li>{% empty %}<li class="mut">None yet</li>{% endfor %}</ul>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ dform.as_p }}<button name="add_doc">Upload</button></form></div></div>{% endblock %}

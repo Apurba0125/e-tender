@@ -1,0 +1,12 @@
+{% autoescape off %}
+Dear {{ v.contact_name }},
+
+Thank you for participating in tender {{ tender.tender_no }} – {{ tender.title }}.
+
+After evaluation, your bid was not selected on this occasion. We appreciate
+your interest and look forward to your participation in future tenders.
+
+Regards,
+Procurement Department
+{{ organization_name }}
+{% endautoescape %}

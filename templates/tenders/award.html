@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="award-page">
+	<div class="page-heading">
+		<p class="eyebrow">Award management</p>
+		<h1>Award – {{ t.tender_no }}</h1>
+	</div>
+
+	<section class="award-summary" aria-label="Award summary">
+		<div class="summary-item">
+			<span class="summary-label">Selected vendor</span>
+			<span class="summary-value">{{ award.vendor }}</span>
+		</div>
+		<div class="summary-item">
+			<span class="summary-label">Award value</span>
+			<span class="summary-value">{{ t.currency }} {{ award.awarded_value }}</span>
+		</div>
+		<div class="summary-item">
+			<span class="summary-label">Approval</span>
+			<span class="summary-value">{{ award.approved_by }} <span class="badge">{{ award.get_status_display }}</span></span>
+		</div>
+	</section>
+
+	{% if award.justification %}
+	<p class="mut">Approval justification: {{ award.justification }}</p>
+	{% endif %}
+
+	<section class="award-section card" aria-labelledby="email-preview-title">
+		<h2 id="email-preview-title">Email preview</h2>
+		<p class="email-meta"><strong>To</strong> {{ award.vendor.user.email }}<br><strong>Subject</strong> {{ subject }}</p>
+		<pre class="mail">{{ body }}</pre>
+		{% if user.role == 'PO' %}
+		<form method="post" class="award-actions">
+			{% csrf_token %}
+			<label><input type="checkbox" name="regret"> Also send regret emails to other bidders</label>
+			<button class="ok btn">{% if t.status == 'AWARDED' %}Re-send award email{% else %}Send award email{% endif %}</button>
+		</form>
+		{% endif %}
+	</section>
+
+	<section class="award-section" aria-labelledby="delivery-log-title">
+		<h2 id="delivery-log-title">Delivery log</h2>
+		<div class="delivery-table">
+			<table>
+				<thead><tr><th>Time</th><th>Type</th><th>Recipient</th><th>Status</th></tr></thead>
+				<tbody>
+					{% for l in logs %}
+					<tr>
+						<td>{{ l.created_at|date:"d M H:i" }}</td>
+						<td>{{ l.kind }}</td>
+						<td>{{ l.recipient }}</td>
+						<td><span class="badge {% if l.status == 'SENT' %}ok{% else %}bad{% endif %}">{{ l.status }}</span>{% if l.error %}<div class="mut">{{ l.error }}</div>{% endif %}</td>
+					</tr>
+					{% empty %}
+					<tr><td colspan="4" class="mut">No award emails have been recorded yet.</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</section>
+</div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% block content %}<h1>Comparative statement – {{ t.tender_no }}</h1>
+<div class="card">{% if stmt.fewer_than_three %}<p class="badge warn">Fewer than three qualified bids</p>{% endif %}
+<table><tr><th>Rank</th><th>Vendor</th><th>Price</th><th>Taxes</th><th>Total</th><th>Delivery</th><th>Validity</th><th>Tech score</th><th>Δ vs L1</th></tr>
+{% for i in stmt.items.all %}<tr><td><b>{{ i.label }}</b></td><td>{{ i.bid.vendor }}</td><td>{{ i.price }}</td><td>{{ i.taxes }}</td><td>{{ i.total }}</td><td>{{ i.delivery_days }} d</td><td>{{ i.validity_days }} d</td><td>{{ i.tech_score|default:"—" }}</td><td>{{ i.deviation_pct }}%</td></tr>{% endfor %}</table>
+<p class="mut">Generated {{ stmt.generated_at|date:"d M Y H:i" }}.{% if stmt.validated_at %} Validated by {{ stmt.validated_by }} on {{ stmt.validated_at|date:"d M Y H:i" }}. {{ stmt.justification }}{% endif %}</p>
+<a class="btn sec" href="?export=csv">Export CSV</a></div>
+{% if t.status == 'QUOTATION_VALIDATION' and user.role == 'PO' or t.status == 'QUOTATION_VALIDATION' and user.role == 'FC' %}<div class="card"><h2>Validate &amp; send to CFO</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="validate">{% if stmt.fewer_than_three %}<p><label>Justification (required)</label><textarea name="justification" rows="3" required></textarea></p>{% endif %}<button class="ok btn">I have checked this statement – validate</button></form></div>{% endif %}{% endblock %}

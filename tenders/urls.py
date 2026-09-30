@@ -1,0 +1,28 @@
+from django.urls import path
+from . import views as v
+
+urlpatterns = [
+    path('', v.dashboard, name='dashboard'),
+    path('notices/', v.notice_list, name='notice_list'),
+    path('notices/new/', v.notice_create, name='notice_create'),
+    path('notices/<int:pk>/action/', v.notice_action, name='notice_action'),
+    path('tenders/', v.tender_list, name='tender_list'),
+    path('tenders/new/', v.tender_create, name='tender_create'),
+    path('tenders/<int:pk>/', v.tender_detail, name='tender_detail'),
+    path('tenders/<int:pk>/edit/', v.tender_edit, name='tender_edit'),
+    path('tenders/<int:pk>/action/', v.tender_action, name='tender_action'),
+    path('tenders/<int:pk>/bid/', v.bid_form, name='bid_form'),
+    path('tenders/<int:pk>/forward/<str:stage>/', v.forward_view, name='forward'),
+    path('tenders/<int:pk>/review/', v.review, name='review'),
+    path('tenders/<int:pk>/statement/', v.statement_view, name='statement'),
+    path('tenders/<int:pk>/cfo/', v.cfo_view, name='cfo'),
+    path('tenders/<int:pk>/award/', v.award_view, name='award'),
+    path('tenders/<int:pk>/award/accept/', v.award_accept, name='award_accept'),
+    path('my-bids/', v.my_bids, name='my_bids'),
+    path('bids/<int:pk>/withdraw/', v.bid_withdraw, name='bid_withdraw'),
+    path('notifications/', v.notifications, name='notifications'),
+    path('reports/', v.reports, name='reports'),
+    path('audit/', v.audit_log, name='audit'),
+    path('emails/', v.email_log, name='email_log'),
+    path('files/<str:kind>/<int:pk>/', v.download, name='download'),
+]

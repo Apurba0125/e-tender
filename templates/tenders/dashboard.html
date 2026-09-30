@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% block content %}<h1>Dashboard</h1>
+{% if user.role == 'VENDOR' %}
+{% if vendor.status != 'APPROVED' %}<div class="card"><span class="badge warn">{{ vendor.get_status_display }}</span> Your account cannot view or bid on tenders until approved (and email verified).</div>{% endif %}
+<div class="grid"><div class="card"><h2>Open tenders</h2>{% for t in open_tenders %}<p><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }} – {{ t.title }}</a><br><span class="mut">closes {{ t.bid_end_at|date:"d M Y H:i" }}</span></p>{% empty %}<p class="mut">None</p>{% endfor %}</div>
+<div class="card"><h2>Invited to me</h2>{% for t in invited %}<p><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }} – {{ t.title }}</a></p>{% empty %}<p class="mut">None</p>{% endfor %}</div>
+<div class="card"><h2>My bids</h2>{% for b in my_bids %}<p><a href="{% url 'tender_detail' b.tender.pk %}">{{ b.tender.tender_no }}</a> <span class="badge">{{ b.get_status_display }}</span></p>{% empty %}<p class="mut">None</p>{% endfor %}</div>
+<div class="card"><h2>Awarded to me</h2>{% for t in awarded %}<p><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }}</a></p>{% empty %}<p class="mut">None</p>{% endfor %}</div></div>
+<div class="card"><h2>Latest notices</h2>{% for n in notices %}<p>{{ n.notice_no }} – {{ n.title }}</p>{% empty %}<p class="mut">None</p>{% endfor %}</div>
+{% elif user.role == 'PO' or user.role == 'ADMIN' %}
+{% if pending_vendors %}<div class="card"><a href="{% url 'vendor_list' %}?status=PENDING">{{ pending_vendors }} vendor registration(s) awaiting approval →</a></div>{% endif %}
+{% if user.role == 'PO' %}<p class="row"><a class="btn" href="{% url 'notice_create' %}">+ Notice</a><a class="btn" href="{% url 'tender_create' %}">+ Tender</a></p>{% endif %}
+<div class="grid"><div class="card"><h2>Tenders by status</h2>{% for s in status_counts %}<p>{{ s.status }} <b>{{ s.n }}</b></p>{% empty %}<p class="mut">No tenders</p>{% endfor %}</div>
+<div class="card"><h2>Upcoming deadlines</h2>{% for t in deadlines %}<p><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }}</a> – {{ t.bid_end_at|date:"d M H:i" }}</p>{% empty %}<p class="mut">None</p>{% endfor %}</div>
+<div class="card"><h2>Pending PO actions</h2>{% for t in pending %}<p><a href="{% url 'tender_detail' t.pk %}">{{ t.tender_no }}</a> <span class="badge warn">{{ t.get_status_display }}</span></p>{% empty %}<p class="mut">Nothing pending</p>{% endfor %}</div></div>
+{% else %}
+<div class="card"><h2>Awaiting your {{ stage|lower }} decision</h2>{% for t in waiting %}<p><a href="{% if user.role == 'CFO' %}{% url 'cfo' t.pk %}{% else %}{% url 'review' t.pk %}{% endif %}">{{ t.tender_no }} – {{ t.title }}</a></p>{% empty %}<p class="mut">Nothing pending</p>{% endfor %}</div>
+{% endif %}{% endblock %}

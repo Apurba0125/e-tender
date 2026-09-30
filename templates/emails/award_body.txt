@@ -1,0 +1,25 @@
+{% autoescape off %}
+Dear {{ vendor_contact_name }},
+
+We are pleased to inform you that {{ vendor_company_name }} has been selected
+for the tender detailed below, following evaluation and approval by our
+competent authority.
+
+Tender No.     : {{ tender.tender_no }}
+Tender Title   : {{ tender.title }}
+Awarded Value  : {{ currency }} {{ awarded_value }}
+Delivery Period: {{ delivery_period }}
+Offer Validity : {{ offer_validity }}
+
+Next steps:
+1. Please confirm acceptance of this award by {{ acceptance_date }}
+   through the vendor portal or by replying to this email.
+2. Our procurement team will contact you regarding the contract/purchase order
+   and other formalities.
+
+Contact: {{ po.get_full_name|default:po.username }}, {{ po.email }}, {{ po.phone }}
+
+Regards,
+Procurement Department
+{{ organization_name }}
+{% endautoescape %}

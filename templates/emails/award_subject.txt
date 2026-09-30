@@ -1,0 +1,3 @@
+{% autoescape off %}
+Award of Tender – {{ tender.tender_no }} – {{ tender.title }}
+{% endautoescape %}

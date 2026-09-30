@@ -1,0 +1,5 @@
+{% extends 'base.html' %}{% block content %}<h1>CFO approval – {{ t.tender_no }} <span class="badge info">{{ t.get_status_display }}</span></h1>
+<div class="card"><p>{{ t.title }} · Estimate {{ t.currency }} {{ t.estimated_value }}</p><p class="mut">Validated by {{ stmt.validated_by }} {{ stmt.validated_at|date:"d M Y H:i" }} {{ stmt.justification }}</p></div>
+<form method="post" class="card">{% csrf_token %}<table><tr><th></th><th>Rank</th><th>Vendor</th><th>Total</th><th>Delivery</th><th>Δ vs L1</th></tr>
+{% for i in stmt.items.all %}<tr><td>{% if active %}<input type="radio" name="item" value="{{ i.pk }}" {% if forloop.first %}checked{% endif %}>{% endif %}</td><td><b>{{ i.label }}</b></td><td>{{ i.bid.vendor }}</td><td>{{ t.currency }} {{ i.total }}</td><td>{{ i.delivery_days }} d</td><td>{{ i.deviation_pct }}%</td></tr>{% endfor %}</table>
+{% if active %}<p><label>Justification (mandatory if not L1)</label><textarea name="justification" rows="2"></textarea></p>{{ dform.as_p }}<button>Submit decision</button>{% endif %}</form>{% endblock %}

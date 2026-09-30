@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>{% block title %}e-Tender{% endblock %} · {{ ORG_NAME }}</title>
+	{% load static %}<link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+{% if user.is_authenticated %}
+<div class="app-shell">
+	<aside class="sidebar">
+		<a class="sidebar-brand" href="/">
+			<span class="brand-mark" aria-hidden="true">eT</span>
+			<span class="brand-copy"><strong>e-Tender</strong><small>{{ ORG_NAME }}</small></span>
+		</a>
+		<p class="sidebar-section-label">Workspace</p>
+		<nav class="side-nav" aria-label="Main navigation">
+			<a class="side-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon" aria-hidden="true">⌂</span>Dashboard</a>
+			<a class="side-link{% if request.resolver_match.url_name == 'notice_list' %} active{% endif %}" href="{% url 'notice_list' %}"><span class="nav-icon" aria-hidden="true">▤</span>Notices</a>
+			<a class="side-link{% if request.resolver_match.url_name == 'tender_list' or request.resolver_match.url_name == 'tender_detail' %} active{% endif %}" href="{% url 'tender_list' %}"><span class="nav-icon" aria-hidden="true">◇</span>Tenders</a>
+			{% if user.role == 'VENDOR' %}
+			<a class="side-link{% if request.resolver_match.url_name == 'my_bids' %} active{% endif %}" href="{% url 'my_bids' %}"><span class="nav-icon" aria-hidden="true">◈</span>My bids</a>
+			<a class="side-link{% if request.resolver_match.url_name == 'profile' %} active{% endif %}" href="{% url 'profile' %}"><span class="nav-icon" aria-hidden="true">◎</span>Profile</a>
+			{% endif %}
+			{% if user.role == 'PO' or user.role == 'ADMIN' %}
+			<a class="side-link{% if request.resolver_match.url_name == 'vendor_list' %} active{% endif %}" href="{% url 'vendor_list' %}"><span class="nav-icon" aria-hidden="true">♙</span>Vendors</a>
+			<a class="side-link{% if request.resolver_match.url_name == 'email_log' %} active{% endif %}" href="{% url 'email_log' %}"><span class="nav-icon" aria-hidden="true">✉</span>Emails</a>
+			{% endif %}
+			{% if user.role == 'PO' or user.role == 'ADMIN' or user.role == 'CFO' %}
+			<a class="side-link{% if request.resolver_match.url_name == 'reports' %} active{% endif %}" href="{% url 'reports' %}"><span class="nav-icon" aria-hidden="true">▥</span>Reports</a>
+			{% endif %}
+			{% if user.role != 'VENDOR' %}
+			<a class="side-link{% if request.resolver_match.url_name == 'audit' %} active{% endif %}" href="{% url 'audit' %}"><span class="nav-icon" aria-hidden="true">◷</span>Audit</a>
+			{% endif %}
+			{% if user.role == 'ADMIN' %}
+			<a class="side-link" href="/admin/"><span class="nav-icon" aria-hidden="true">⚙</span>Admin</a>
+			{% endif %}
+		</nav>
+		<div class="sidebar-spacer"></div>
+		<div class="sidebar-user">
+			<span class="user-avatar" aria-hidden="true">{{ user.username|slice:":1"|upper }}</span>
+			<span class="user-copy"><strong>{{ user.username }}</strong><small>{{ user.get_role_display }}</small></span>
+			<a class="signout-link" href="{% url 'logout' %}" aria-label="Sign out">↗</a>
+		</div>
+	</aside>
+	<div class="app-main">
+		<header class="topbar">
+			<span class="topbar-context">Procurement workspace</span>
+			<div class="topbar-actions">
+				<a class="notifications-link" href="{% url 'notifications' %}">Notifications{% if unread_count %}<span class="notification-count">{{ unread_count }}</span>{% endif %}</a>
+				<a class="mobile-signout" href="{% url 'logout' %}">Sign out</a>
+			</div>
+		</header>
+{% else %}
+<header class="public-header">
+	<a class="sidebar-brand" href="/">
+		<span class="brand-mark" aria-hidden="true">eT</span>
+		<span class="brand-copy"><strong>e-Tender</strong><small>{{ ORG_NAME }}</small></span>
+	</a>
+</header>
+{% endif %}
+<main>
+	{% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+	{% block content %}{% endblock %}
+</main>
+{% if user.is_authenticated %}</div></div>{% endif %}
+</body>
+</html>

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block content %}<h1>Vendors</h1>
+<form class="row" method="get"><select name="status" style="width:auto"><option value="">All statuses</option>{% for v,l in statuses %}<option value="{{ v }}" {% if v == sel %}selected{% endif %}>{{ l }}</option>{% endfor %}</select><button>Filter</button></form><br>
+<div class="card"><table><tr><th>Company</th><th>Contact</th><th>Tax ID / PAN</th><th>Category</th><th>Email ✓</th><th>Status</th><th>Action</th></tr>
+{% for v in vendors %}<tr><td>{{ v.company_name }}</td><td>{{ v.contact_name }}<br><span class="mut">{{ v.user.email }} · {{ v.phone }}</span></td><td>{{ v.tax_id }} / {{ v.pan }}</td><td>{{ v.category }}</td><td>{{ v.user.email_verified|yesno:"yes,no" }}</td>
+<td><span class="badge {% if v.status == 'APPROVED' %}ok{% elif v.status == 'PENDING' %}warn{% else %}bad{% endif %}">{{ v.get_status_display }}</span></td>
+<td><form method="post" action="{% url 'vendor_action' v.pk %}" class="row">{% csrf_token %}<input name="reason" placeholder="reason" style="width:120px">
+{% if v.status != 'APPROVED' %}<button name="action" value="approve" class="ok btn">Approve</button>{% endif %}
+{% if v.status == 'PENDING' %}<button name="action" value="reject" class="btn sec">Reject</button>{% endif %}
+{% if v.status == 'APPROVED' %}<button name="action" value="suspend" class="btn sec">Suspend</button>{% endif %}
+{% if v.status != 'BLACKLISTED' %}<button name="action" value="blacklist" class="btn bad">Blacklist</button>{% endif %}</form></td></tr>{% empty %}<tr><td colspan="7">No vendors.</td></tr>{% endfor %}</table></div>{% endblock %}
