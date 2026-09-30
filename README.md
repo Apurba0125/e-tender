@@ -35,6 +35,28 @@ The `.env` file is ignored by Git. Restart the server after creating or changing
 
 The included free web-service configuration uses an ephemeral filesystem: uploaded tender and bid documents can disappear on redeploy/restart. Use persistent storage (such as a paid Render disk or private object storage) before handling real tenders. A free PostgreSQL database may also have plan-specific limits or expiration; review Render's current terms before storing production data.
 
+### Transfer existing SQLite records
+Do not commit `db.sqlite3` or the exported fixture. Bid payloads are encrypted, so rotate them to a fresh key before exporting:
+
+```powershell
+$newBidKey = python -c "import secrets; print(secrets.token_urlsafe(48))"
+$env:NEW_BID_ENCRYPTION_KEY = $newBidKey
+python manage.py rotate_bid_encryption_key
+$env:BID_ENCRYPTION_KEY = $newBidKey
+$env:NEW_BID_ENCRYPTION_KEY = $null
+python manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude admin.logentry --exclude sessions --output "$env:TEMP\e-tender-data.json"
+```
+
+Set this same `BID_ENCRYPTION_KEY` in Render before importing, and keep it private. Create the PostgreSQL schema, then from PowerShell set `DATABASE_URL` to the Render database's **External Database URL** and run:
+
+```powershell
+python manage.py migrate
+python manage.py loaddata "$env:TEMP\e-tender-data.json"
+Remove-Item Env:DATABASE_URL
+```
+
+The fixture contains sensitive account and tender records; delete it from `%TEMP%` after verifying the import. `dumpdata` does not copy uploaded file contents: transfer the local `media/` files separately to configured persistent storage and keep the same relative paths, or file links in imported records will be broken. The rotation command changes the local database too; store the new key in the ignored local `.env` if you will continue using that database.
+
 ## Where the SRS is covered
 | SRS area | Code |
 |---|---|

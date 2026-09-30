@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core import mail
 from django.core.exceptions import PermissionDenied
@@ -10,7 +11,7 @@ from django.utils import timezone
 from accounts.models import User, Vendor
 from . import services as svc
 from .forms import TenderForm
-from .models import Approval, AuditLog, Bid, Notice, Tender
+from .models import Approval, AuditLog, Bid, BidVersion, Notice, Tender
 from .services import WorkflowError
 
 
@@ -21,6 +22,38 @@ class EmailDeliveryTests(TestCase):
 
         self.assertEqual(log.status, 'FAILED')
         self.assertIn('email was not delivered', log.error)
+
+
+@override_settings(BID_ENCRYPTION_KEY='old-test-key')
+class BidKeyRotationTests(TestCase):
+    def test_rotation_reencrypts_bid_payloads(self):
+        call_command('seed_demo', verbosity=0)
+        purchase_officer = User.objects.get(username='po')
+        vendor = Vendor.objects.get(user__username='vendor1')
+        now = timezone.now()
+        tender = Tender.objects.create(
+            title='Key rotation test',
+            category='IT',
+            description='Test',
+            estimated_value=100,
+            bid_start_at=now,
+            bid_end_at=now + timedelta(hours=1),
+            opening_at=now + timedelta(hours=2),
+            created_by=purchase_officer,
+        )
+        bid = Bid.objects.create(tender=tender, vendor=vendor)
+        version = BidVersion.objects.create(bid=bid, version_no=1, encrypted_payload='')
+        version.set_payload({'price': 123})
+        version.save(update_fields=['encrypted_payload'])
+        old_payload = version.encrypted_payload
+
+        with patch.dict('os.environ', {'NEW_BID_ENCRYPTION_KEY': 'new-test-key'}):
+            call_command('rotate_bid_encryption_key')
+
+        version.refresh_from_db()
+        self.assertNotEqual(version.encrypted_payload, old_payload)
+        with override_settings(BID_ENCRYPTION_KEY='new-test-key'):
+            self.assertEqual(version.get_payload(as_owner=True), {'price': 123})
 
 
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
