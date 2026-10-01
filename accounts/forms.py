@@ -1,6 +1,21 @@
 from django import forms
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.password_validation import validate_password
 from .models import User, Vendor, VendorDocument
+
+
+class AdminUserCreateForm(UserCreationForm):
+    role = forms.ChoiceField(choices=[choice for choice in User.Role.choices if choice[0] != User.Role.VENDOR])
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'role', 'phone')
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('An account with this email already exists.')
+        return email
 
 
 class VendorRegisterForm(forms.ModelForm):

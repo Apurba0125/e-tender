@@ -26,3 +26,41 @@ class LoginLockoutTests(TestCase):
 			response,
 			'Account temporarily locked after repeated failures. Try again later.',
 		)
+
+
+class AdminUserManagementTests(TestCase):
+	def test_admin_can_create_internal_user(self):
+		admin = User.objects.create_user(
+			username='admin-user', email='admin@example.com', password='Test-password-123',
+			role=User.Role.ADMIN,
+		)
+		self.client.force_login(admin)
+		page = self.client.get(reverse('user_admin'))
+		self.assertContains(page, 'Create internal user')
+
+		response = self.client.post(reverse('user_admin'), {
+			'username': 'reviewer',
+			'email': 'reviewer@example.com',
+			'first_name': 'Taylor',
+			'last_name': 'Reviewer',
+			'role': User.Role.TC,
+			'phone': '1234567890',
+			'password1': 'Strong-test-password-927!',
+			'password2': 'Strong-test-password-927!',
+		})
+
+		created_user = User.objects.get(username='reviewer')
+		self.assertRedirects(response, reverse('user_admin'))
+		self.assertEqual(created_user.role, User.Role.TC)
+		self.assertTrue(created_user.check_password('Strong-test-password-927!'))
+
+	def test_non_admin_cannot_access_user_management(self):
+		user = User.objects.create_user(
+			username='officer', email='officer@example.com', password='Test-password-123',
+			role=User.Role.PO,
+		)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse('user_admin'))
+
+		self.assertEqual(response.status_code, 403)

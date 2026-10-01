@@ -6,6 +6,7 @@ urlpatterns = [
     path('vendor/login/', views.vendor_login, name='vendor_login'),
     path('internal/login/', views.internal_login, name='internal_login'),
     path('logout/', views.do_logout, name='logout'),
+    path('users/', views.user_admin, name='user_admin'),
     path('vendor/register/', views.register, name='register'),
     path('verify/<str:token>/', views.verify_email, name='verify_email'),
     path('vendors/', views.vendor_list, name='vendor_list'),

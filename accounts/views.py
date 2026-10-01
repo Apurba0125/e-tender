@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from tenders.decorators import role_required
 from tenders.services import audit, deliver_email, notify, users_with_role
-from .forms import VendorDocForm, VendorProfileForm, VendorRegisterForm
+from .forms import AdminUserCreateForm, VendorDocForm, VendorProfileForm, VendorRegisterForm
 from .models import User, Vendor
 
 
@@ -54,6 +54,19 @@ def internal_login(request):
 def do_logout(request):
     logout(request)
     return redirect('internal_login')
+
+
+@role_required('ADMIN')
+def user_admin(request):
+    form = AdminUserCreateForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        new_user = form.save()
+        audit(request.user, 'USER_CREATED', new_user,
+              new={'username': new_user.username, 'role': new_user.role}, request=request)
+        messages.success(request, f'User {new_user.username} created.')
+        return redirect('user_admin')
+    users = User.objects.order_by('role', 'username')
+    return render(request, 'accounts/user_admin.html', {'form': form, 'users': users})
 
 
 def register(request):
