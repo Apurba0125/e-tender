@@ -110,20 +110,7 @@ if os.environ.get('DATABASE_URL'):
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+AUTH_PASSWORD_VALIDATORS = []
 
 
 # Internationalization
@@ -161,7 +148,6 @@ STORAGES = {
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/internal/login/'
 LOGIN_REDIRECT_URL = '/'
-AUTH_PASSWORD_VALIDATORS[1]['OPTIONS'] = {'min_length': 10}
 SESSION_COOKIE_AGE = 20 * 60          # AUTH-06: 20 min inactivity timeout
 SESSION_SAVE_EVERY_REQUEST = True
 MAX_FAILED_LOGINS = 5                 # AUTH-05

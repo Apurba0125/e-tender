@@ -45,14 +45,14 @@ class AdminUserManagementTests(TestCase):
 			'last_name': 'Reviewer',
 			'role': User.Role.TC,
 			'phone': '1234567890',
-			'password1': 'Strong-test-password-927!',
-			'password2': 'Strong-test-password-927!',
+			'password1': '123',
+			'password2': '123',
 		})
 
 		created_user = User.objects.get(username='reviewer')
 		self.assertRedirects(response, reverse('user_admin'))
 		self.assertEqual(created_user.role, User.Role.TC)
-		self.assertTrue(created_user.check_password('Strong-test-password-927!'))
+		self.assertTrue(created_user.check_password('123'))
 
 	def test_non_admin_cannot_access_user_management(self):
 		user = User.objects.create_user(

@@ -20,7 +20,7 @@ class AdminUserCreateForm(UserCreationForm):
 
 class VendorRegisterForm(forms.ModelForm):
     email = forms.EmailField()
-    password = forms.CharField(widget=forms.PasswordInput, help_text='Min. 10 characters.')
+    password = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(widget=forms.PasswordInput, label='Confirm password')
 
     class Meta:
