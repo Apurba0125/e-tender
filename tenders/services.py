@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from accounts.models import User, Vendor
-from .models import (Approval, AuditLog, Award, Bid, ComparativeStatement, Config, EmailLog,
+from .models import (Approval, AuditLog, Award, Bid, ComparativeStatement, Config, EmailLog, Notice, Requisition,
                      Notification, Stage, StageDocument, StageForward, StatementItem, Tender, TenderInvite)
 
 S = Tender.Status
@@ -105,6 +105,29 @@ def publish_tender(tender, user, request=None):
     audit(user, 'TENDER_PUBLISHED', tender, new=tender.tender_no, request=request)
     notify([v.user for v in eligible_vendors(tender)], 'TENDER', f'New tender: {tender.tender_no} – {tender.title}',
            f'/tenders/{tender.pk}/', email_subject=f'Tender {tender.tender_no}: {tender.title}', tender=tender)
+
+
+def generate_tender_from_requisition(requisition, user, request=None):
+    if requisition.status != Requisition.Status.APPROVED:
+        raise WorkflowError('Only an approved requisition can generate a tender.')
+    if requisition.tender_id:
+        raise WorkflowError('A tender has already been generated for this requisition.')
+    with transaction.atomic():
+        notice = Notice.objects.create(title=requisition.title, description=requisition.description, created_by=user)
+        now = timezone.now()
+        tender = Tender.objects.create(
+            notice=notice, title=requisition.title, category=requisition.category,
+            description=requisition.description, quantity=requisition.quantity, unit=requisition.unit,
+            estimated_value=requisition.estimated_value, currency=requisition.currency,
+            terms=requisition.terms, bid_start_at=now + timedelta(days=1),
+            bid_end_at=now + timedelta(days=8), opening_at=now + timedelta(days=8, hours=1), created_by=user)
+        requisition.tender = tender
+        requisition.status = Requisition.Status.TENDERED
+        requisition.reviewed_by = user
+        requisition.reviewed_at = timezone.now()
+        requisition.save(update_fields=['tender', 'status', 'reviewed_by', 'reviewed_at'])
+    audit(user, 'TENDER_GENERATED_FROM_REQUISITION', requisition, new=tender.tender_no, request=request)
+    return tender
 
 
 def extend_deadline(tender, user, new_end, reason, request=None):

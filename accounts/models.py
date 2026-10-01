@@ -6,6 +6,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = 'ADMIN', 'Admin'
         PO = 'PO', 'Purchase Officer'
+        HOD = 'HOD', 'Head of Department'
         TC = 'TC', 'Technical Committee'
         FC = 'FC', 'Finance Committee'
         CFO = 'CFO', 'CFO'
@@ -18,7 +19,7 @@ class User(AbstractUser):
     failed_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
 
-    INTERNAL_ROLES = ('ADMIN', 'PO', 'TC', 'FC', 'CFO')
+    INTERNAL_ROLES = ('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO')
 
     @property
     def is_vendor(self):

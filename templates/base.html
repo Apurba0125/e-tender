@@ -18,6 +18,7 @@
 		<nav class="side-nav" aria-label="Main navigation">
 			<a class="side-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}"><span class="nav-icon" aria-hidden="true">⌂</span>Dashboard</a>
 			<a class="side-link{% if request.resolver_match.url_name == 'notice_list' %} active{% endif %}" href="{% url 'notice_list' %}"><span class="nav-icon" aria-hidden="true">▤</span>Notices</a>
+			{% if user.role == 'HOD' or user.role == 'PO' or user.role == 'ADMIN' %}<a class="side-link{% if request.resolver_match.url_name == 'requisition_list' or request.resolver_match.url_name == 'requisition_create' %} active{% endif %}" href="{% url 'requisition_list' %}"><span class="nav-icon" aria-hidden="true">▥</span>Requisitions</a>{% endif %}
 			<a class="side-link{% if request.resolver_match.url_name == 'tender_list' or request.resolver_match.url_name == 'tender_detail' %} active{% endif %}" href="{% url 'tender_list' %}"><span class="nav-icon" aria-hidden="true">◇</span>Tenders</a>
 			{% if user.role == 'VENDOR' %}
 			<a class="side-link{% if request.resolver_match.url_name == 'my_bids' %} active{% endif %}" href="{% url 'my_bids' %}"><span class="nav-icon" aria-hidden="true">◈</span>My bids</a>

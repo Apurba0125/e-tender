@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 
 from tenders.decorators import role_required
 from tenders.services import audit, deliver_email, notify, users_with_role
@@ -16,6 +17,7 @@ from .forms import AdminUserCreateForm, VendorDocForm, VendorProfileForm, Vendor
 from .models import User, Vendor
 
 
+@never_cache
 def _login(request, portal):
     if request.method == 'POST':
         ident = request.POST.get('username', '').strip()

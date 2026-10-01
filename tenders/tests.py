@@ -11,7 +11,7 @@ from django.utils import timezone
 from accounts.models import User, Vendor
 from . import services as svc
 from .forms import TenderForm
-from .models import Approval, AuditLog, Bid, BidVersion, Notice, Tender
+from .models import Approval, AuditLog, Bid, BidVersion, Notice, Requisition, Tender
 from .services import WorkflowError
 
 
@@ -84,6 +84,37 @@ class FullFlow(TestCase):
             t.invites.create(vendor=v)
         svc.publish_tender(t, self.po)
         return t
+
+    def test_hod_requisition_generates_draft_notice_and_tender(self):
+        hod = User.objects.get(username='hod')
+        hod_client = self.client
+        hod_client.login(username='hod', password='Tender@12345')
+        response = hod_client.post('/requisitions/new/', {
+            'title': 'Network switches', 'category': 'IT', 'description': 'Managed 24-port switches',
+            'quantity': '4', 'unit': 'Nos', 'estimated_value': '240000', 'currency': 'INR',
+            'required_by': '', 'terms': 'Deliver to the IT store',
+        })
+        self.assertEqual(response.status_code, 302)
+        req = Requisition.objects.get(requested_by=hod)
+        self.assertEqual(req.status, Requisition.Status.SUBMITTED)
+
+        po_client = self.client
+        po_client.login(username='po', password='Tender@12345')
+        response = po_client.post(f'/requisitions/{req.pk}/action/', {'action': 'approve'})
+        self.assertEqual(response.status_code, 302)
+        req.refresh_from_db()
+        self.assertEqual(req.status, Requisition.Status.APPROVED)
+        response = po_client.post(f'/requisitions/{req.pk}/action/', {'action': 'generate'})
+        self.assertEqual(response.status_code, 302)
+        req.refresh_from_db()
+        self.assertEqual(req.status, Requisition.Status.TENDERED)
+        self.assertEqual(req.tender.status, Tender.Status.DRAFT)
+        self.assertEqual(req.tender.notice.status, Notice.Status.DRAFT)
+
+        svc.publish_notice(req.tender.notice, self.po)
+        svc.publish_tender(req.tender, self.po)
+        req.tender.refresh_from_db()
+        self.assertIn(req.tender.status, (Tender.Status.PUBLISHED, Tender.Status.BIDDING_OPEN))
 
     def bid(self, t, v, price, days=10):
         return svc.submit_bid(t, v, dict(price=price, taxes=0, delivery_days=days, validity_days=90, remarks='ok'), None, None)

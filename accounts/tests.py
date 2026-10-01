@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -9,6 +9,27 @@ from .models import User, Vendor
 
 
 class LoginLockoutTests(TestCase):
+	def test_vendor_login_uses_fresh_csrf_token(self):
+		user = User.objects.create_user(
+			username='vendor-user', email='vendor@example.com', password='Test-password-123',
+			role=User.Role.VENDOR, email_verified=True,
+		)
+		Vendor.objects.create(
+			user=user, company_name='Acme Supplies', contact_name='Jordan Vendor', phone='1234567890',
+			address='1 Market Street', tax_id='TAX-123', pan='PAN-123', category='Office supplies',
+			status=Vendor.Status.APPROVED,
+		)
+		client = Client(enforce_csrf_checks=True)
+		login_page = client.get(reverse('vendor_login'))
+
+		self.assertIn('no-cache', login_page['Cache-Control'])
+		response = client.post(reverse('vendor_login'), {
+			'username': 'vendor-user', 'password': 'Test-password-123',
+			'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+		}, HTTP_REFERER='http://testserver/vendor/login/')
+
+		self.assertRedirects(response, reverse('dashboard'))
+
 	def test_locked_account_displays_lockout_message(self):
 		User.objects.create_user(
 			username='locked-user',

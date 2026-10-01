@@ -1,7 +1,7 @@
 from django.contrib import admin
 from . import models as m
 
-admin.site.register([m.Notice, m.Tender, m.TenderInvite, m.TenderDocument, m.Corrigendum, m.Bid, m.Approval,
+admin.site.register([m.Notice, m.Requisition, m.Tender, m.TenderInvite, m.TenderDocument, m.Corrigendum, m.Bid, m.Approval,
                      m.TechnicalEvaluation, m.ComparativeStatement, m.StatementItem, m.Award, m.EmailLog, m.Notification])
 
 

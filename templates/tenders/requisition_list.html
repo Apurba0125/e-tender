@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<div class="row" style="justify-content:space-between"><h1>Purchase requisitions</h1>{% if user.role == 'HOD' %}<a class="btn" href="{% url 'requisition_create' %}">+ New requisition</a>{% endif %}</div>
+{% for r in requisitions %}<section class="card">
+<div class="row"><b>{{ r.request_no }}</b><span class="badge{% if r.status == 'REJECTED' %} bad{% elif r.status == 'APPROVED' %} ok{% endif %}">{{ r.get_status_display }}</span><span class="mut">{{ r.created_at|date:"d M Y H:i" }}</span></div>
+<h2>{{ r.title }}</h2><p>{{ r.description|linebreaksbr }}</p>
+<dl class="kv"><dt>Requested by</dt><dd>{{ r.requested_by }}</dd><dt>Category</dt><dd>{{ r.category }}</dd><dt>Quantity</dt><dd>{{ r.quantity }} {{ r.unit }}</dd><dt>Estimated value</dt><dd>{{ r.currency }} {{ r.estimated_value }}</dd><dt>Required by</dt><dd>{{ r.required_by|date:"d M Y"|default:"-" }}</dd></dl>
+{% if r.reason %}<p class="mut"><b>Decision note:</b> {{ r.reason }}</p>{% endif %}
+{% if r.tender %}<p><a class="btn sec" href="{% url 'tender_detail' r.tender.pk %}">Open {{ r.tender.tender_no }}</a></p>{% endif %}
+{% if user.role == 'PO' and r.status == 'SUBMITTED' %}<form method="post" action="{% url 'requisition_action' r.pk %}" class="row">{% csrf_token %}<button name="action" value="approve" class="ok btn">Approve request</button><input name="reason" placeholder="Rejection reason"><button name="action" value="reject" class="bad btn">Reject</button></form>{% endif %}
+{% if user.role == 'PO' and r.status == 'APPROVED' %}<form method="post" action="{% url 'requisition_action' r.pk %}">{% csrf_token %}<button name="action" value="generate" class="btn">Generate notice and tender</button></form>{% endif %}
+</section>{% empty %}<p class="mut">No requisitions.</p>{% endfor %}{% endblock %}

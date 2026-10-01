@@ -21,7 +21,7 @@ class Command(BaseCommand):
         if created:
             admin.set_password(pw)
             admin.save()
-        for role, name in (('PO', 'po'), ('TC', 'tc1'), ('TC', 'tc2'), ('FC', 'fc1'), ('FC', 'fc2'), ('CFO', 'cfo')):
+        for role, name in (('PO', 'po'), ('HOD', 'hod'), ('TC', 'tc1'), ('TC', 'tc2'), ('FC', 'fc1'), ('FC', 'fc2'), ('CFO', 'cfo')):
             u, c = User.objects.get_or_create(username=name, defaults=dict(
                 email=f'{name}@example.com', role=role, first_name=name.upper(), email_verified=True))
             if c:

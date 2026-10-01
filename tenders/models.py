@@ -66,6 +66,44 @@ class Notice(models.Model):
         return f'{self.notice_no} {self.title}'
 
 
+class Requisition(models.Model):
+    class Status(models.TextChoices):
+        SUBMITTED = 'SUBMITTED', 'Submitted'
+        APPROVED = 'APPROVED', 'Approved'
+        REJECTED = 'REJECTED', 'Rejected'
+        TENDERED = 'TENDERED', 'Tender generated'
+
+    request_no = models.CharField(max_length=30, blank=True, unique=True)
+    title = models.CharField(max_length=250)
+    category = models.CharField(max_length=80)
+    description = models.TextField('Product specification')
+    quantity = models.DecimalField(max_digits=14, decimal_places=2, default=1)
+    unit = models.CharField(max_length=30, default='Nos')
+    estimated_value = models.DecimalField(max_digits=16, decimal_places=2)
+    currency = models.CharField(max_length=5, default='INR')
+    required_by = models.DateField(null=True, blank=True)
+    terms = models.TextField('Delivery / purchase requirements', blank=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.SUBMITTED)
+    reason = models.TextField(blank=True)
+    requested_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='requisitions')
+    reviewed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    tender = models.OneToOneField('Tender', null=True, blank=True, on_delete=models.SET_NULL, related_name='requisition')
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def save(self, *a, **k):
+        super().save(*a, **k)
+        if not self.request_no:
+            self.request_no = f'REQ/{timezone.now().year}/{self.pk:04d}'
+            super().save(update_fields=['request_no'])
+
+    def __str__(self):
+        return f'{self.request_no} {self.title}'
+
+
 class Tender(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'

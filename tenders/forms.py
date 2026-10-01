@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 
 from accounts.models import Vendor
-from .models import Approval, Notice, Tender
+from .models import Approval, Notice, Requisition, Tender
 from .validators import validate_upload
 
 DT = dict(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M')
@@ -14,6 +14,17 @@ class NoticeForm(forms.ModelForm):
         model = Notice
         fields = ['title', 'description', 'attachment']
         widgets = {'description': forms.Textarea(attrs={'rows': 5})}
+
+
+class RequisitionForm(forms.ModelForm):
+    class Meta:
+        model = Requisition
+        fields = ['title', 'category', 'description', 'quantity', 'unit', 'estimated_value', 'currency', 'required_by', 'terms']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'terms': forms.Textarea(attrs={'rows': 3}),
+            'required_by': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 
 class TenderForm(forms.ModelForm):
@@ -34,7 +45,10 @@ class TenderForm(forms.ModelForm):
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        self.fields['notice'].queryset = Notice.objects.filter(status='PUBLISHED')
+        notice_qs = Notice.objects.filter(status='PUBLISHED')
+        if self.instance.pk and self.instance.notice_id:
+            notice_qs = Notice.objects.filter(pk=self.instance.notice_id) | notice_qs
+        self.fields['notice'].queryset = notice_qs.distinct()
         if self.instance.pk:
             self.fields['invited'].initial = Vendor.objects.filter(invites__tender=self.instance)
 

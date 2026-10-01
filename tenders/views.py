@@ -12,9 +12,10 @@ from django.views.decorators.http import require_POST
 from accounts.models import User, Vendor
 from . import services as svc
 from .decorators import role_required
-from .forms import (BidForm, DecisionForm, EvaluationForm, ExtendForm, ForwardForm, NoticeForm, TenderDocsForm, TenderForm)
+from .forms import (BidForm, DecisionForm, EvaluationForm, ExtendForm, ForwardForm, NoticeForm, RequisitionForm,
+                    TenderDocsForm, TenderForm)
 from .models import (Approval, AuditLog, Bid, BidVersion, ComparativeStatement, EmailLog, Notice, Notification, Stage,
-                     StageDocument, StageForward, Tender, TenderDocument, TenderInvite)
+                     Requisition, StageDocument, StageForward, Tender, TenderDocument, TenderInvite)
 from .services import WorkflowError
 
 S = Tender.Status
@@ -30,6 +31,8 @@ def tenders_for(user):
         if not v or v.status != Vendor.Status.APPROVED:       # blacklisted / suspended see nothing (VEN-04)
             return qs.none()
         return qs.exclude(status__in=[S.DRAFT]).filter(Q(visibility='OPEN') | Q(invites__vendor=v)).distinct()
+    if user.role == 'HOD':
+        return qs.exclude(status=S.DRAFT)
     stage = {'TC': Stage.TECHNICAL, 'FC': Stage.FINANCE, 'CFO': Stage.CFO}[user.role]
     return qs.filter(forwards__stage=stage).distinct()
 
@@ -45,7 +48,7 @@ def fail(request, exc):
 
 
 # ------------------------------ dashboard ------------------------------
-@role_required('ADMIN', 'PO', 'TC', 'FC', 'CFO', 'VENDOR')
+@role_required('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO', 'VENDOR')
 def dashboard(request):
     u = request.user
     for t in Tender.objects.filter(status__in=[S.PUBLISHED, S.BIDDING_OPEN]):
@@ -60,12 +63,15 @@ def dashboard(request):
                    my_bids=v.bids.select_related('tender'),
                    awarded=qs.filter(award__vendor=v),
                    notices=Notice.objects.filter(status='PUBLISHED')[:5], vendor=v)
+    elif u.role == 'HOD':
+        ctx['requisitions'] = Requisition.objects.filter(requested_by=u)
     elif u.role in ('PO', 'ADMIN'):
         ctx.update(status_counts=Tender.objects.values('status').annotate(n=Count('id')).order_by('status'),
                    deadlines=Tender.objects.filter(status__in=[S.PUBLISHED, S.BIDDING_OPEN]).order_by('bid_end_at')[:8],
                    pending=Tender.objects.filter(status__in=[S.BIDDING_CLOSED, S.OPENED, S.TECHNICAL_APPROVED, S.QUOTATION_VALIDATION,
                                                              S.APPROVED, S.REJECTED, S.SENT_BACK]),
                    pending_vendors=Vendor.objects.filter(status='PENDING').count())
+        ctx['pending_requisitions'] = Requisition.objects.filter(status='SUBMITTED')
     else:
         stage = {'TC': Stage.TECHNICAL, 'FC': Stage.FINANCE, 'CFO': Stage.CFO}[u.role]
         waiting = Tender.objects.filter(status=svc.STATUS_FOR_STAGE[stage])
@@ -75,10 +81,69 @@ def dashboard(request):
 
 
 # ------------------------------ notices ------------------------------
-@role_required('PO', 'ADMIN', 'VENDOR', 'TC', 'FC', 'CFO')
+@role_required('PO', 'ADMIN', 'HOD', 'VENDOR', 'TC', 'FC', 'CFO')
 def notice_list(request):
     qs = Notice.objects.all() if request.user.role in ('PO', 'ADMIN') else Notice.objects.filter(status='PUBLISHED')
     return render(request, 'tenders/notice_list.html', {'notices': qs})
+
+
+# ------------------------------ requisitions ------------------------------
+@role_required('HOD', 'PO', 'ADMIN')
+def requisition_list(request):
+    qs = Requisition.objects.select_related('requested_by', 'reviewed_by', 'tender')
+    if request.user.role == 'HOD':
+        qs = qs.filter(requested_by=request.user)
+    return render(request, 'tenders/requisition_list.html', {'requisitions': qs})
+
+
+@role_required('HOD')
+def requisition_create(request):
+    form = RequisitionForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        req = form.save(commit=False)
+        req.requested_by = request.user
+        req.save()
+        svc.audit(request.user, 'REQUISITION_SUBMITTED', req, request=request)
+        svc.notify(svc.users_with_role('PO'), 'REQUISITION', f'{req.request_no} needs procurement review.',
+                   '/requisitions/', email_subject=f'New requisition – {req.request_no}')
+        messages.success(request, f'{req.request_no} submitted to the Purchase Officer.')
+        return redirect('requisition_list')
+    return render(request, 'tenders/form.html', {'form': form, 'title': 'New purchase requisition'})
+
+
+@role_required('PO')
+@require_POST
+def requisition_action(request, pk):
+    req = get_object_or_404(Requisition, pk=pk)
+    action = request.POST.get('action')
+    if action == 'approve' and req.status == Requisition.Status.SUBMITTED:
+        req.status, req.reviewed_by, req.reviewed_at = Requisition.Status.APPROVED, request.user, timezone.now()
+        req.reason = ''
+        req.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'reason'])
+        svc.audit(request.user, 'REQUISITION_APPROVED', req, request=request)
+        svc.notify([req.requested_by], 'REQUISITION', f'{req.request_no} was approved for tender preparation.',
+                   '/requisitions/')
+        messages.success(request, f'{req.request_no} approved. It can now generate a tender.')
+    elif action == 'reject' and req.status == Requisition.Status.SUBMITTED:
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            messages.error(request, 'A reason is required when rejecting a requisition.')
+        else:
+            req.status, req.reason, req.reviewed_by, req.reviewed_at = Requisition.Status.REJECTED, reason, request.user, timezone.now()
+            req.save(update_fields=['status', 'reason', 'reviewed_by', 'reviewed_at'])
+            svc.audit(request.user, 'REQUISITION_REJECTED', req, new=reason, request=request)
+            svc.notify([req.requested_by], 'REQUISITION', f'{req.request_no} was rejected: {reason}', '/requisitions/')
+            messages.success(request, f'{req.request_no} rejected.')
+    elif action == 'generate':
+        try:
+            tender = svc.generate_tender_from_requisition(req, request.user, request)
+            messages.success(request, f'{tender.tender_no} generated as a draft. Publish its notice, then the tender.')
+            return redirect('tender_edit', pk=tender.pk)
+        except svc.WorkflowError as exc:
+            fail(request, exc)
+    else:
+        messages.error(request, 'That requisition action is no longer available.')
+    return redirect('requisition_list')
 
 
 @role_required('PO')
@@ -112,7 +177,7 @@ def notice_action(request, pk):
 
 
 # ------------------------------ tenders ------------------------------
-@role_required('ADMIN', 'PO', 'TC', 'FC', 'CFO', 'VENDOR')
+@role_required('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO', 'VENDOR')
 def tender_list(request):
     qs = tenders_for(request.user)
     for t in qs.filter(status__in=[S.PUBLISHED, S.BIDDING_OPEN]):
@@ -195,7 +260,7 @@ def tender_edit(request, pk):
     return render(request, 'tenders/tender_form.html', {'form': form, 'dform': dform, 'title': f'Edit {t.tender_no}'})
 
 
-@role_required('ADMIN', 'PO', 'TC', 'FC', 'CFO', 'VENDOR')
+@role_required('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO', 'VENDOR')
 def tender_detail(request, pk):
     t = get_tender(request, pk)
     u = request.user
@@ -439,7 +504,7 @@ def award_accept(request, pk):
 
 
 # ------------------------------ misc ------------------------------
-@role_required('ADMIN', 'PO', 'TC', 'FC', 'CFO', 'VENDOR')
+@role_required('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO', 'VENDOR')
 def notifications(request):
     qs = Notification.objects.filter(user=request.user)
     items = list(qs[:100])
@@ -490,7 +555,7 @@ def email_log(request):
     return render(request, 'tenders/email_log.html', {'logs': EmailLog.objects.all()[:200]})
 
 
-@role_required('ADMIN', 'PO', 'TC', 'FC', 'CFO', 'VENDOR')
+@role_required('ADMIN', 'PO', 'HOD', 'TC', 'FC', 'CFO', 'VENDOR')
 def download(request, kind, pk):
     """All files are private and go through a permission check."""
     u = request.user
