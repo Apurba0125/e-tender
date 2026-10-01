@@ -38,6 +38,7 @@ class AdminUserManagementTests(TestCase):
 		self.client.force_login(admin)
 		page = self.client.get(reverse('user_admin'))
 		self.assertContains(page, 'Create internal user')
+		self.assertContains(page, 'href="/admin/">Django admin</a>')
 
 		response = self.client.post(reverse('user_admin'), {
 			'username': 'reviewer',

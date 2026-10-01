@@ -48,6 +48,7 @@
 		<header class="topbar">
 			<span class="topbar-context">Procurement workspace</span>
 			<div class="topbar-actions">
+				{% if user.role == 'ADMIN' %}<a class="btn sec" href="{% url 'admin:index' %}">Django admin</a>{% endif %}
 				<a class="notifications-link" href="{% url 'notifications' %}">Notifications{% if unread_count %}<span class="notification-count">{{ unread_count }}</span>{% endif %}</a>
 				<a class="mobile-signout" href="{% url 'logout' %}">Sign out</a>
 			</div>
