@@ -34,7 +34,7 @@
 			<a class="side-link{% if request.resolver_match.url_name == 'audit' %} active{% endif %}" href="{% url 'audit' %}"><span class="nav-icon" aria-hidden="true">◷</span>Audit</a>
 			{% endif %}
 			{% if user.role == 'ADMIN' %}
-			<a class="side-link{% if request.resolver_match.url_name == 'user_admin' %} active{% endif %}" href="{% url 'user_admin' %}"><span class="nav-icon" aria-hidden="true">⚙</span>Admin</a>
+			<a class="side-link{% if request.resolver_match.url_name == 'user_admin' %} active{% endif %}" href="{% url 'user_admin' %}"><span class="nav-icon" aria-hidden="true">⚙</span>Users</a>
 			{% endif %}
 		</nav>
 		<div class="sidebar-spacer"></div>
