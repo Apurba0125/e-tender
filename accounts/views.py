@@ -115,8 +115,18 @@ def vendor_action(request, pk):
             v.status_reason = request.POST.get('reason', '')
             v.save()
             audit(request.user, f'VENDOR_{v.status}', v, old=old, new=v.status_reason, request=request)
-            deliver_email(v.user.email, f'Vendor registration update: {v.get_status_display()}',
-                          f'Dear {v.contact_name}, your vendor status is now: {v.get_status_display()}. {v.status_reason}')
+            if old != v.status:
+                if v.status == Vendor.Status.APPROVED:
+                    deliver_email(
+                        v.user.email,
+                        f'Vendor verification completed: {v.company_name}',
+                        f'Dear {v.contact_name},\n\n'
+                        f'The verification of {v.company_name} is complete. '
+                        'Your vendor registration has been approved. You can now access eligible tenders.',
+                    )
+                else:
+                    deliver_email(v.user.email, f'Vendor registration update: {v.get_status_display()}',
+                                  f'Dear {v.contact_name}, your vendor status is now: {v.get_status_display()}. {v.status_reason}')
             messages.success(request, f'{v.company_name}: {v.get_status_display()}')
     return redirect('vendor_list')
 
